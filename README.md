@@ -53,21 +53,37 @@ https://edt.uvsq.fr/cal?vt=month&dt=2026-09-12&et=group&fid0=HISL2TD1
                                                              ^^^^^^^^
 ```
 
-## Mise en ligne
-
-1. Pousse ce dossier sur un dépôt GitHub, branche `main`.
-2. Settings → Pages → Source : `Deploy from a branch`, branche `main`, dossier `/docs`.
-3. Settings → Actions → General → Workflow permissions : `Read and write permissions`.
-4. Actions → `Update calendars` → `Run workflow` pour la première génération.
-
-Le feed est ensuite disponible à :
+## Le feed en ligne
 
 ```
-https://<ton-compte>.github.io/<ton-depot>/hisl2td1.ics
+https://umesiyah.github.io/edt-uvsq-ics/hisl2td1.ics
 ```
+
+Page d'abonnement : <https://umesiyah.github.io/edt-uvsq-ics/>
 
 Pour ajouter un groupe, édite le tableau `CALENDARS` dans
-`.github/workflows/update-calendars.yml`.
+`.github/workflows/update-calendars.yml` :
+
+```bash
+CALENDARS=(
+  "hisl2td1 HISL2TD1"
+  "hisl2td2 HISL2TD2"          # un second calendrier
+  "histoire-l2 HISL2TD1 HISL2TD2"  # les deux fusionnés en un seul
+)
+```
+
+### Refaire cette installation ailleurs
+
+1. Settings → Pages → Source : `Deploy from a branch`, branche `main`, dossier `/docs`.
+2. Settings → Actions → General → Workflow permissions : `Read and write permissions`.
+3. Actions → `Update calendars` → `Run workflow`.
+
+Vérifie ensuite le type MIME, que certains clients exigent :
+
+```bash
+curl -sI https://umesiyah.github.io/edt-uvsq-ics/hisl2td1.ics | grep -i content-type
+# content-type: text/calendar
+```
 
 ## S'abonner
 
@@ -115,3 +131,6 @@ est donc mis à jour, pas dupliqué.
   département qui saisit le planning.
 - Si l'université ferme l'endpoint ou ajoute une authentification, le script
   casse. Il n'y a pas de contournement prévu.
+- GitHub désactive un workflow planifié après 60 jours sans activité sur le
+  dépôt. Pendant l'année les commits du bot suffisent à le garder actif, mais
+  l'été peut dépasser ce seuil. GitHub prévient par mail, un clic réactive.
