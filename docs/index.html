@@ -30,7 +30,12 @@
     border: 1px solid var(--line); border-radius: 4px;
     background: rgba(128,128,128,.12); color: inherit;
   }
-  button:hover { background: rgba(128,128,128,.22); }
+  button:hover, .btn:hover { background: rgba(128,128,128,.22); }
+  .btn {
+    display: inline-flex; align-items: center; padding: .5rem .9rem;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: rgba(128,128,128,.12); color: inherit; text-decoration: none;
+  }
   code {
     font-family: ui-monospace, monospace; font-size: .9em;
     background: rgba(128,128,128,.15); padding: .1em .35em; border-radius: 3px;
@@ -45,10 +50,10 @@
 <p class="hint">Source : <code>edt.uvsq.fr</code>. Mis à jour trois fois par jour.</p>
 
 <div class="warn">
-  <strong>Copie l'URL, ne clique pas dessus.</strong>
-  Un clic télécharge le fichier. L'ouvrir ensuite fait un <em>import</em> :
-  une copie figée, qui ne se mettra jamais à jour.
-  Il faut coller l'URL dans la fonction <em>abonnement</em> de ton agenda.
+  <strong>Ne télécharge jamais le fichier.</strong>
+  Ouvrir un <code>.ics</code> téléchargé fait un <em>import</em> : une copie
+  figée, qui ne se mettra jamais à jour. Utilise le bouton « S'abonner »,
+  ou colle l'URL dans la fonction <em>abonnement</em> de ton agenda.
 </div>
 
 <div class="feed">
@@ -56,7 +61,10 @@
   <div class="row">
     <input id="u" readonly value="https://umesiyah.github.io/edt-uvsq-ics/hisl2td1.ics">
     <button type="button" id="c">Copier</button>
+    <a class="btn" href="webcal://umesiyah.github.io/edt-uvsq-ics/hisl2td1.ics">S'abonner</a>
   </div>
+  <p class="hint">Le bouton « S'abonner » ouvre directement Apple Calendar,
+  Outlook ou Thunderbird en mode abonnement. Sur Google Agenda, copie l'URL.</p>
 </div>
 
 <h2>Où coller l'URL</h2>
