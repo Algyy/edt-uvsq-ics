@@ -1,0 +1,55 @@
+name: Update calendars
+
+on:
+  schedule:
+    # Three times a day, Paris time-ish. Offset minutes to avoid the busy hour.
+    - cron: "17 5,11,17 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["celcat_ics.py", ".github/workflows/update-calendars.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-calendars
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the feeds
+        run: |
+          # One line per calendar: "<output slug> <federation id> [more ids...]"
+          # Several ids on one line are merged into a single calendar.
+          CALENDARS=(
+            "hisl2td1 HISL2TD1"
+          )
+          for entry in "${CALENDARS[@]}"; do
+            read -r slug ids <<< "$entry"
+            args=()
+            for id in $ids; do args+=(--fid "$id"); done
+            python3 celcat_ics.py "${args[@]}" \
+              --out "docs/${slug}.ics" \
+              --min-events 20
+          done
+
+      - name: Commit if the schedule changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- docs; then
+            echo "No schedule change."
+            exit 0
+          fi
+          git add docs
+          git commit -m "chore: refresh calendars ($(date -u +%Y-%m-%d))"
+          git push
