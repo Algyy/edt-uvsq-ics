@@ -35,6 +35,8 @@ PRODID = "-//socal//CELCAT to iCalendar//FR"
 # CELCAT joins the six description sections with this exact separator.
 SECTION_SEP = "\r\n\r\n<br />\r\n\r\n"
 HASH_PROPERTY = "X-CELCAT-CONTENT-HASH"
+# Matches the three-a-day cron in .github/workflows/update-calendars.yml.
+REFRESH_INTERVAL = "PT6H"
 USER_AGENT = "socal-celcat-ics/1.0"
 
 
@@ -255,7 +257,11 @@ def make_uid(course: Course, namespace: str) -> str:
 
 
 def build_calendar(
-    courses: list[Course], calendar_name: str, namespace: str, source_url: str
+    courses: list[Course],
+    calendar_name: str,
+    namespace: str,
+    source_url: str,
+    feed_url: str | None = None,
 ) -> str:
     courses = sorted(courses, key=lambda course: (course.start, course.title))
     stamp = as_utc(datetime.now(timezone.utc))
@@ -263,8 +269,11 @@ def build_calendar(
     # Hash everything except the per-run timestamp, so an unchanged schedule
     # produces an unchanged file and the cron job commits nothing.
     payload = "\n".join(
-        f"{c.start.isoformat()}|{c.end.isoformat()}|{c.title}|{c.location}|{c.details}"
-        for c in courses
+        [f"{calendar_name}|{feed_url or ''}|{source_url}"]
+        + [
+            f"{c.start.isoformat()}|{c.end.isoformat()}|{c.title}|{c.location}|{c.details}"
+            for c in courses
+        ]
     )
     content_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
@@ -279,6 +288,13 @@ def build_calendar(
         f"X-WR-CALDESC:{escape_text('Emploi du temps CELCAT - ' + source_url)}",
         f"{HASH_PROPERTY}:{content_hash}",
     ]
+
+    if feed_url:
+        # RFC 7986. Clients that honour these re-download on their own, and
+        # some offer to subscribe instead of import when the file is opened.
+        lines.append(f"SOURCE;VALUE=URI:{feed_url}")
+        lines.append(f"REFRESH-INTERVAL;VALUE=DURATION:{REFRESH_INTERVAL}")
+        lines.append(f"X-PUBLISHED-TTL:{REFRESH_INTERVAL}")  # older Outlook, Apple
 
     for course in courses:
         lines += [
@@ -336,6 +352,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--name", help="calendar name (default: CELCAT display name)")
     parser.add_argument(
+        "--url",
+        help="public URL this feed is served at; adds SOURCE and REFRESH-INTERVAL",
+    )
+    parser.add_argument(
         "--days-back", type=int, default=120, help="how far back to fetch (default 120)"
     )
     parser.add_argument(
@@ -377,7 +397,9 @@ def main(argv: list[str] | None = None) -> int:
         [("vt", "month"), ("et", "group")]
         + [(f"fid{index}", fid) for index, fid in enumerate(args.fid)]
     )
-    calendar = build_calendar(courses, name, namespace, f"{args.base_url}/cal?{query}")
+    calendar = build_calendar(
+        courses, name, namespace, f"{args.base_url}/cal?{query}", args.url
+    )
 
     if read_existing_hash(args.out) == extract_hash(calendar):
         print(f"{args.out}: unchanged ({len(courses)} events)")

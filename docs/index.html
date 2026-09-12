@@ -5,36 +5,102 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Emplois du temps CELCAT</title>
 <style>
-  :root { color-scheme: light dark; }
+  :root { color-scheme: light dark; --line: rgba(128,128,128,.35); }
   body {
-    margin: 0 auto; padding: 2rem 1rem; max-width: 40rem;
-    font: 16px/1.6 system-ui, sans-serif;
+    margin: 0 auto; padding: 2rem 1rem; max-width: 42rem;
+    font: 16px/1.6 system-ui, -apple-system, sans-serif;
   }
-  h1 { font-size: 1.4rem; }
+  h1 { font-size: 1.45rem; margin-bottom: .25rem; }
+  h2 { font-size: 1.05rem; margin-top: 2rem; }
+  .warn {
+    border-left: 3px solid #d9822b; padding: .6rem 0 .6rem .9rem;
+    margin: 1.25rem 0; background: rgba(217,130,43,.09);
+  }
+  .feed { border: 1px solid var(--line); border-radius: 6px; padding: 1rem; }
+  .feed h3 { margin: 0 0 .6rem; font-size: 1rem; }
+  .row { display: flex; gap: .5rem; align-items: stretch; flex-wrap: wrap; }
+  input {
+    flex: 1 1 18rem; min-width: 0; padding: .5rem .6rem;
+    font: .85rem ui-monospace, monospace;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: transparent; color: inherit;
+  }
+  button {
+    padding: .5rem .9rem; font: inherit; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: rgba(128,128,128,.12); color: inherit;
+  }
+  button:hover { background: rgba(128,128,128,.22); }
   code {
-    font-family: ui-monospace, monospace; font-size: 0.9em;
+    font-family: ui-monospace, monospace; font-size: .9em;
     background: rgba(128,128,128,.15); padding: .1em .35em; border-radius: 3px;
-    overflow-wrap: anywhere;
   }
-  li { margin-bottom: .75rem; }
+  dt { font-weight: 600; margin-top: .8rem; }
+  dd { margin: 0 0 0 1rem; }
   p.hint { opacity: .75; font-size: .9rem; }
 </style>
 </head>
 <body>
 <h1>Emplois du temps CELCAT</h1>
+<p class="hint">Source : <code>edt.uvsq.fr</code>. Mis à jour trois fois par jour.</p>
 
-<p>Copie l'URL du feed, puis ajoute-la dans ton agenda comme
-<em>abonnement par URL</em>. N'utilise pas « importer » : ça fige une copie.</p>
+<div class="warn">
+  <strong>Copie l'URL, ne clique pas dessus.</strong>
+  Un clic télécharge le fichier. L'ouvrir ensuite fait un <em>import</em> :
+  une copie figée, qui ne se mettra jamais à jour.
+  Il faut coller l'URL dans la fonction <em>abonnement</em> de ton agenda.
+</div>
 
-<ul>
-  <li>
-    <strong>HISTOIRE - L2 - TD1</strong><br>
-    <code><a href="hisl2td1.ics">hisl2td1.ics</a></code>
-  </li>
-</ul>
+<div class="feed">
+  <h3>HISTOIRE - L2 - TD1</h3>
+  <div class="row">
+    <input id="u" readonly value="https://umesiyah.github.io/edt-uvsq-ics/hisl2td1.ics">
+    <button type="button" id="c">Copier</button>
+  </div>
+</div>
 
-<p class="hint">Mis à jour trois fois par jour depuis
-<code>edt.uvsq.fr</code>. Google Agenda peut mettre jusqu'à 24 h à relire un
-feed externe.</p>
+<h2>Où coller l'URL</h2>
+<dl>
+  <dt>Google Agenda</dt>
+  <dd>Paramètres → Ajouter un agenda → <strong>À partir de l'URL</strong></dd>
+
+  <dt>Apple Calendar (macOS)</dt>
+  <dd>Fichier → <strong>Nouvel abonnement au calendrier</strong></dd>
+
+  <dt>Apple Calendar (iOS)</dt>
+  <dd>Réglages → Apps → Calendrier → Comptes → Ajouter un compte → Autre →
+      <strong>Ajouter un calendrier avec abonnement</strong></dd>
+
+  <dt>Proton Calendar</dt>
+  <dd>Paramètres → Mes agendas → Ajouter un agenda →
+      <strong>S'abonner à un agenda externe</strong></dd>
+
+  <dt>Thunderbird</dt>
+  <dd>Nouvel agenda → <strong>Sur le réseau</strong> → iCalendar (ICS)</dd>
+</dl>
+
+<h2>Vérifier que c'est bien un abonnement</h2>
+<p>Ton agenda doit afficher le calendrier dans une section à part
+(« Abonnements », « Autres agendas »), et ses réglages doivent montrer
+l'URL ainsi qu'un intervalle d'actualisation. Sans ces deux signes,
+c'est un import : supprime-le et recommence.</p>
+
+<p class="hint">Google relit un feed externe quand il veut, souvent entre 8 et
+24 h. Apple Calendar et Thunderbird laissent régler l'intervalle toi-même.</p>
+
+<script>
+  const field = document.getElementById('u');
+  const button = document.getElementById('c');
+  button.addEventListener('click', async () => {
+    field.select();
+    try {
+      await navigator.clipboard.writeText(field.value);
+    } catch {
+      document.execCommand('copy');
+    }
+    button.textContent = 'Copié';
+    setTimeout(() => { button.textContent = 'Copier'; }, 1500);
+  });
+</script>
 </body>
 </html>

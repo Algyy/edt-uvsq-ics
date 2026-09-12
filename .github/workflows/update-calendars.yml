@@ -33,12 +33,17 @@ jobs:
           CALENDARS=(
             "hisl2td1 HISL2TD1"
           )
+          # github.io serves the owner segment in lowercase.
+          owner=$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
+          base="https://${owner}.github.io/${GITHUB_REPOSITORY#*/}"
+
           for entry in "${CALENDARS[@]}"; do
             read -r slug ids <<< "$entry"
             args=()
             for id in $ids; do args+=(--fid "$id"); done
             python3 celcat_ics.py "${args[@]}" \
               --out "docs/${slug}.ics" \
+              --url "${base}/${slug}.ics" \
               --min-events 20
           done
 

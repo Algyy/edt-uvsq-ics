@@ -33,6 +33,7 @@ Options utiles :
 | `--fid ID` | Identifiant CELCAT du groupe. Répétable pour fusionner plusieurs groupes. |
 | `--out CHEMIN` | Fichier `.ics` à écrire. |
 | `--name TEXTE` | Nom du calendrier. Par défaut, CELCAT le fournit. |
+| `--url URL` | URL publique du feed. Ajoute `SOURCE` et `REFRESH-INTERVAL`. |
 | `--res-type N` | `103` groupe, `100` enseignant, `104` étudiant. |
 | `--days-back N` | Profondeur du passé, 120 jours par défaut. |
 | `--days-ahead N` | Profondeur du futur, 400 jours par défaut. |
@@ -87,13 +88,24 @@ curl -sI https://umesiyah.github.io/edt-uvsq-ics/hisl2td1.ics | grep -i content-
 
 ## S'abonner
 
-**Google Agenda** — Paramètres → Ajouter un agenda → À partir de l'URL. Colle
-l'URL du `.ics`. Ne passe pas par « Importer », qui fait une copie figée.
+Il faut **coller l'URL**, jamais télécharger puis ouvrir le fichier. Ouvrir un
+`.ics` téléchargé produit un import : une copie figée, sans lien avec la source.
+
+**Google Agenda** — Paramètres → Ajouter un agenda → À partir de l'URL.
+
+**Apple Calendar (macOS)** — Fichier → Nouvel abonnement au calendrier.
+
+**Apple Calendar (iOS)** — Réglages → Apps → Calendrier → Comptes → Ajouter un
+compte → Autre → Ajouter un calendrier avec abonnement.
 
 **Proton Calendar** — Paramètres → Mes agendas → Ajouter un agenda → S'abonner
 à un agenda externe.
 
-**Thunderbird / Apple Calendar** — Nouvel agenda → Sur le réseau → format iCalendar.
+**Thunderbird** — Nouvel agenda → Sur le réseau → iCalendar (ICS).
+
+Pour vérifier qu'un abonnement a bien été créé : le calendrier doit apparaître
+dans une section à part, et ses réglages doivent afficher l'URL et un intervalle
+d'actualisation. Si l'un des deux manque, c'est un import.
 
 ### Fréquence de rafraîchissement
 
