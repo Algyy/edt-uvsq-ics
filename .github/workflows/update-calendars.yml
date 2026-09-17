@@ -31,7 +31,7 @@ jobs:
           # One line per calendar: "<output slug> <federation id> [more ids...]"
           # Several ids on one line are merged into a single calendar.
           CALENDARS=(
-            "hisl2td1 HISL2TD1"
+            "M2STJA MYSTJ2_26"
           )
           # github.io serves the owner segment in lowercase.
           owner=$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
