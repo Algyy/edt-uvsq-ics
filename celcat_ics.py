@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Generate an iCalendar feed from a CELCAT Calendar instance.
 
-CELCAT exposes an unauthenticated JSON endpoint (``/Home/GetCalendarData``)
-that its own web UI calls. This script queries it and writes a ``.ics`` file
-that Google Calendar, Proton Calendar, Thunderbird or Apple Calendar can
-subscribe to.
+CELCAT exposes a JSON endpoint (``/Home/GetCalendarData``) that its own web
+UI calls. This script queries it and writes a ``.ics`` file that Google
+Calendar, Proton Calendar, Thunderbird or Apple Calendar can subscribe to.
+
+Since October 2026 edt.uvsq.fr only answers that endpoint for a logged-in
+session. Set CELCAT_USER and CELCAT_PASSWORD (your UVSQ network login) and
+the script signs in through ``/LdapLogin`` before fetching.
 
 Example:
-    python3 celcat_ics.py --fid HISL2TD1 --out public/hisl2td1.ics
+    CELCAT_USER=... CELCAT_PASSWORD=... \
+        python3 celcat_ics.py --fid HISL2TD1 --out public/hisl2td1.ics
 """
 
 from __future__ import annotations
@@ -15,7 +19,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import html
+import http.cookiejar
 import json
+import os
 import re
 import sys
 import time
@@ -39,6 +45,11 @@ HASH_PROPERTY = "X-CELCAT-CONTENT-HASH"
 REFRESH_INTERVAL = "PT6H"
 USER_AGENT = "socal-celcat-ics/1.0"
 
+# One cookie jar for the whole run, so the login session is reused by every
+# request that follows it.
+COOKIES = http.cookiejar.CookieJar()
+OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(COOKIES))
+
 
 # --------------------------------------------------------------------------
 # HTTP
@@ -58,13 +69,46 @@ def post_form(url: str, fields: list[tuple[str, str]], *, retries: int = 3) -> b
     for attempt in range(retries):
         try:
             request = urllib.request.Request(url, data=body, headers=headers)
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with OPENER.open(request, timeout=60) as response:
                 return response.read()
         except (urllib.error.URLError, TimeoutError, OSError) as error:
             last_error = error
             if attempt < retries - 1:
                 time.sleep(2**attempt)
     raise RuntimeError(f"POST {url} failed after {retries} attempts: {last_error}")
+
+
+def login(base_url: str, username: str, password: str) -> None:
+    """Open a CELCAT session through the LDAP login form, or raise."""
+    headers = {"User-Agent": USER_AGENT}
+    request = urllib.request.Request(f"{base_url}/LdapLogin", headers=headers)
+    with OPENER.open(request, timeout=60) as response:
+        page = response.read().decode("utf-8", "replace")
+
+    tag = re.search(r'<input[^>]*name="__RequestVerificationToken"[^>]*>', page)
+    token = re.search(r'value="([^"]*)"', tag.group(0)) if tag else None
+    if not token:
+        raise RuntimeError("CELCAT login page has no __RequestVerificationToken")
+
+    fields = [
+        ("Name", username),
+        ("Password", password),
+        ("RememberMe", "false"),
+        ("__RequestVerificationToken", html.unescape(token.group(1))),
+    ]
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    request = urllib.request.Request(
+        f"{base_url}/LdapLogin/Logon",
+        data=body,
+        headers={**headers, "Content-Type": "application/x-www-form-urlencoded"},
+    )
+    with OPENER.open(request, timeout=60) as response:
+        landed_on = response.geturl()
+    # A good login redirects away from the form; a bad one shows it again.
+    if "LdapLogin" in landed_on:
+        raise RuntimeError(
+            "CELCAT login refused: check the CELCAT_USER and CELCAT_PASSWORD secrets"
+        )
 
 
 def fetch_events(
@@ -83,7 +127,19 @@ def fetch_events(
     ]
     fields += [("federationIds[]", fid) for fid in federation_ids]
     raw = post_form(f"{base_url}/Home/GetCalendarData", fields)
-    events = json.loads(raw)
+    if not raw.strip():
+        raise RuntimeError(
+            "GetCalendarData returned an empty body: CELCAT wants a logged-in "
+            "session (set CELCAT_USER and CELCAT_PASSWORD) or the login expired"
+        )
+    try:
+        events = json.loads(raw)
+    except json.JSONDecodeError as error:
+        start_of_body = raw[:300].decode("utf-8", "replace")
+        raise RuntimeError(
+            f"GetCalendarData did not return JSON ({error}). Start of body:\n"
+            f"{start_of_body}"
+        ) from None
     if not isinstance(events, list):
         raise RuntimeError(f"unexpected payload from GetCalendarData: {type(events)}")
     return events
@@ -375,6 +431,11 @@ def main(argv: list[str] | None = None) -> int:
     today = datetime.now(LOCAL_TZ).date()
     start = today - timedelta(days=args.days_back)
     end = today + timedelta(days=args.days_ahead)
+
+    username = os.environ.get("CELCAT_USER", "").strip()
+    password = os.environ.get("CELCAT_PASSWORD", "")
+    if username and password:
+        login(args.base_url, username, password)
 
     raw_events = fetch_events(args.base_url, args.fid, args.res_type, start, end)
     courses = [course for course in map(parse_event, raw_events) if course]
