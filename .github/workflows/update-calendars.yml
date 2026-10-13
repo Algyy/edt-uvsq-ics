@@ -27,6 +27,9 @@ jobs:
           python-version: "3.12"
 
       - name: Build the feeds
+        env:
+          CELCAT_USER: ${{ secrets.CELCAT_USER }}
+          CELCAT_PASSWORD: ${{ secrets.CELCAT_PASSWORD }}
         run: |
           # One line per calendar: "<output slug> <federation id> [more ids...]"
           # Several ids on one line are merged into a single calendar.
